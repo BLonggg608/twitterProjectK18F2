@@ -26,7 +26,7 @@ export const registerController = async (req: Request<ParamsDictionary, any, Reg
   try {
     // tạo 1 user mới và bỏ vào collection users trong database
     const result = await userService.register(req.body)
-    return res.json({
+    res.json({
       message: 'register successfully',
       result
     })
