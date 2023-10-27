@@ -12,7 +12,7 @@ path: /users/login
 method: POST
 body: {email, password}
 */
-userRoute.get('/login', loginValidator, loginController)
+userRoute.get('/login', loginValidator, wrapAsync(loginController))
 
 /*
 Descrtiption: Register new user

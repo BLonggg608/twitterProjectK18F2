@@ -4,16 +4,18 @@ import databaseService from '~/services/database.services'
 import { userService } from '~/services/users.services'
 import { ParamsDictionary } from 'express-serve-static-core'
 import { RegisterReqBody } from '~/models/requests/User.requests'
+import { ObjectId } from 'mongodb'
+import { USERS_MESSAGES } from '~/constants/messages'
 
 export const loginController = async (req: Request, res: Response) => {
   // lấy user_id từ req.user
-  const { user }: any = req
-  const user_id = user._id
+  const user = req.user as User
+  const user_id = user._id as ObjectId
   // dùng user_id tạo access_token và refresh_token
   const result = await userService.login(user_id.toString())
   // res trả về access_token và refresh_token cho client
   res.json({
-    message: 'login successfully',
+    message: USERS_MESSAGES.LOGIN_SUCCESS,
     result
   })
 }
