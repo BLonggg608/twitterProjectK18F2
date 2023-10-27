@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken'
 import { config } from 'dotenv'
+import { TokenPlayload } from '~/models/requests/User.requests'
 config()
 
 // làm hàm nhận vào payload, privateKey, và options
@@ -29,10 +30,10 @@ export const verifyToken = ({
   token: string
   secretOrPublicKey?: string
 }) => {
-  return new Promise<jwt.JwtPayload>((resolve, reject) => {
+  return new Promise<TokenPlayload>((resolve, reject) => {
     jwt.verify(token, secretOrPublicKey, (error, decoded) => {
       if (error) throw reject(error)
-      resolve(decoded as jwt.JwtPayload)
+      resolve(decoded as TokenPlayload)
     })
   })
 }

@@ -1,6 +1,4 @@
 import { Router } from 'express'
-import { access } from 'fs'
-import { register } from 'module'
 import { loginController, logoutController, registerController } from '~/controllers/users.controllers'
 import {
   accessTokenValidator,

@@ -1,4 +1,4 @@
-import express, { NextFunction, Request, Response } from 'express'
+import express from 'express'
 import userRoute from './routes/users.routes'
 import databaseService from './services/database.services'
 import { defaultErrorHandler } from './middlewares/error.middlewares'

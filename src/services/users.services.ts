@@ -1,12 +1,12 @@
 import User from '~/models/schemas/User.schema'
 import databaseService from './database.services'
 import { RegisterReqBody } from '~/models/requests/User.requests'
-import { hasSubscribers } from 'diagnostics_channel'
 import { hashPassword } from '~/utils/crypto'
 import { signToken } from '~/utils/jwt'
 import { TokenType } from '~/constants/enums'
 import { ObjectId } from 'mongodb'
 import RefreshToken from '~/models/schemas/RefreshToken.schema'
+import { USERS_MESSAGES } from '~/constants/messages'
 
 class UserService {
   // hàm nhận vào user_id và bỏ vào payload để tạo access_token
@@ -65,6 +65,11 @@ class UserService {
       })
     )
     return { access_token, refresh_token }
+  }
+
+  async logout(refresh_token: string) {
+    await databaseService.refreshToken.deleteOne({ token: refresh_token })
+    return { message: USERS_MESSAGES.LOGOUT_SUCCESS }
   }
 }
 
