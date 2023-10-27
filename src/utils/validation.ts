@@ -29,7 +29,7 @@ export const validate = (validation: RunnableValidationChains<ValidationChain>) 
       entityErrors.errors[key] = msg
     }
 
-    // ở đây nó xử lý lỗi luôn chứ ko ném về error handler tổng
+    // nếu entityErrors có ít nhất 1 lỗi thì ném về error handler
     next(entityErrors)
   }
 }
