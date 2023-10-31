@@ -8,5 +8,6 @@ declare module 'express' {
     user?: User //trong 1 request có thể có hoặc không có user
     decoded_authorization?: TokenPlayload
     decoded_refresh_token?: TokenPlayload
+    decoded_email_verify_token?: TokenPlayload
   }
 }
