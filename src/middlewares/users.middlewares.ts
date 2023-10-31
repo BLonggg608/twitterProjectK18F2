@@ -195,7 +195,7 @@ export const accessTokenValidator = validate(
               })
             }
             try {
-              // nếu ko có access_token thì mình phải verify AccessToken
+              // nếu có access_token thì mình phải verify AccessToken
               const decoded_authorization = await verifyToken({ token: accessToken })
               // lấy ra decoded_authorization(playload), lưu vào req, để dùng dần
               ;(req as Request).decoded_authorization = decoded_authorization
