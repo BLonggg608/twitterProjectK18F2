@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { wrap } from 'module'
 import {
   changePasswordController,
   emailVerifyTokenController,
@@ -8,6 +9,8 @@ import {
   getProfileController,
   loginController,
   logoutController,
+  oAuthController,
+  refreshController,
   registerController,
   resendEmailVerifyTokenController,
   resetPasswordController,
@@ -214,5 +217,16 @@ usersRouter.put(
   changePasswordValidator,
   wrapAsync(changePasswordController)
 )
+
+/*
+  des: refreshtoken
+  path: '/refresh-token'
+  method: POST
+  Body: {refresh_token: string}
+g}
+  */
+usersRouter.post('/refresh-token', refreshTokenValidator, wrapAsync(refreshController))
+
+usersRouter.get('/oauth/google', wrapAsync(oAuthController))
 
 export default usersRouter

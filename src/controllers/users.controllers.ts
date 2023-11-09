@@ -13,7 +13,8 @@ import {
   GetProfileReqParams,
   FollowReqBody,
   UnfollowReqParams,
-  ChangePasswordReqBody
+  ChangePasswordReqBody,
+  RefreshTokenReqBody
 } from '~/models/requests/User.requests'
 import { ObjectId } from 'mongodb'
 import { USERS_MESSAGES } from '~/constants/messages'
@@ -21,6 +22,7 @@ import databaseService from '~/services/database.services'
 import { ErrorWithStatus } from '~/models/Errors'
 import HTTP_STATUS from '~/constants/httpStatus'
 import { UserVerifyStatus } from '~/constants/enums'
+import { verify } from 'crypto'
 
 export const loginController = async (req: Request<ParamsDictionary, any, LoginReqBody>, res: Response) => {
   // lấy user_id từ req.user
@@ -217,4 +219,26 @@ export const changePasswordController = async (
   const { password } = req.body //lấy old_password và password từ req.body
   const result = await userService.changePassword(user_id, password) //chưa code changePassword
   return res.json(result)
+}
+
+export const refreshController = async (
+  req: Request<ParamsDictionary, any, RefreshTokenReqBody>,
+  res: Response,
+  next: NextFunction
+) => {
+  const { refresh_token } = req.body //lấy refresh_token từ req.body
+  const { user_id, verify } = req.decoded_refresh_token as TokenPayload //lấy refresh_token từ req.body
+  const result = await userService.refreshToken({ user_id, refresh_token, verify })
+  return res.json({
+    message: USERS_MESSAGES.REFRESH_TOKEN_SUCCESS,
+    result
+  })
+}
+
+export const oAuthController = async (req: Request, res: Response, next: NextFunction) => {
+  const { code } = req.query // lấy code từ query params
+  //tạo đường dẫn truyền thông tin result để sau khi họ chọn tại khoản, ta check (tạo | login) xong thì điều hướng về lại client kèm thông tin at và rf
+  const { access_token, refresh_token, new_user } = await userService.oAuth(code as string)
+  const urlRedirect = `${process.env.CLIENT_REDIRECT_CALLBACK}?access_token=${access_token}&refresh_token=${refresh_token}&new_user=${new_user}&verify=${verify}`
+  return res.redirect(urlRedirect)
 }

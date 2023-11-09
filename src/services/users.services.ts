@@ -10,6 +10,8 @@ import { USERS_MESSAGES } from '~/constants/messages'
 import { ErrorWithStatus } from '~/models/Errors'
 import HTTP_STATUS from '~/constants/httpStatus'
 import { Follower } from '~/models/schemas/Followers.schema'
+import axios from 'axios'
+import { access } from 'fs'
 
 class UserService {
   // hàm nhận vào user_id và bỏ vào payload để tạo access_token
@@ -317,6 +319,115 @@ class UserService {
     //ở đây mình chỉ cho ngta đổi mk thôi, nên trả về message
     return {
       message: USERS_MESSAGES.CHANGE_PASSWORD_SUCCESS // trong message.ts thêm CHANGE_PASSWORD_SUCCESS: 'Change password success'
+    }
+  }
+
+  async refreshToken({
+    user_id,
+    verify,
+    refresh_token
+  }: {
+    user_id: string
+    verify: UserVerifyStatus
+    refresh_token: string
+  }) {
+    // tạo ra access_token mới và refresh_token mới
+    const [access_token, new_refresh_token] = await this.signAccessAndRefreshToken({ user_id, verify })
+    await databaseService.refreshToken.deleteOne({ token: refresh_token })
+    await databaseService.refreshToken.insertOne(
+      new RefreshToken({
+        token: new_refresh_token,
+        user_id: new ObjectId(user_id)
+      })
+    )
+    return { access_token, refresh_token: new_refresh_token }
+  }
+
+  // getOAuthGoogleToken dùng code nhận đc để yếu cầu google tạo id_token
+  private async getOAuthGoogleToken(code: string) {
+    const body = {
+      code,
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+      grant_type: 'authorization_code'
+    }
+
+    const { data } = await axios.post('https://oauth2.googleapis.com/token', body, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
+    return data as {
+      access_token: string
+      id_token: string
+    }
+  }
+
+  private async getGoogleUserInfo(access_token: string, id_token: string) {
+    const { data } = await axios.get('https://www.googleapis.com/oauth2/v3/tokeninfo', {
+      params: {
+        access_token,
+        alt: 'json'
+      },
+      headers: {
+        Authorization: `Bearer ${id_token}`
+      }
+    })
+
+    return data as {
+      id: string
+      email: string
+      email_verified: boolean
+      name: string
+      given_name: string
+      family_name: string
+      picture: string
+      locale: string
+    }
+  }
+
+  async oAuth(code: string) {
+    const { id_token, access_token } = await this.getOAuthGoogleToken(code)
+    const userInfor = await this.getGoogleUserInfo(access_token, id_token)
+    //kiểm tra xem email đã verify chưa
+    if (!userInfor.email_verified) {
+      throw new ErrorWithStatus({
+        message: USERS_MESSAGES.EMAIL_NOT_VERIFIED,
+        status: HTTP_STATUS.BAD_REQUEST
+      })
+    }
+    // kiểm tra xem email đã tồn tại trong database chưa
+    const user = await databaseService.users.findOne({ email: userInfor.email })
+    // nếu có thì nghĩa là client đăng nhập
+    if (user) {
+      const [access_token, refresh_token] = await this.signAccessAndRefreshToken({
+        user_id: user._id.toString(),
+        verify: user.verify
+      })
+      // lưu refresh_token vào database
+      await databaseService.refreshToken.insertOne(
+        new RefreshToken({
+          token: refresh_token,
+          user_id: new ObjectId(user._id)
+        })
+      )
+      return { access_token, refresh_token, new_user: 0, verify: user.verify }
+    } else {
+      const password = Math.random().toString(36).slice(1, 15)
+
+      const data = await this.register({
+        name: userInfor.name,
+        email: userInfor.email,
+        password: password,
+        confirm_password: password,
+        date_of_birth: new Date().toISOString()
+      })
+      return {
+        ...data,
+        new_user: 1,
+        verify: UserVerifyStatus.Unverified
+      }
     }
   }
 }
