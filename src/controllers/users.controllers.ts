@@ -1,4 +1,4 @@
-import { Request, Response } from 'express'
+import { NextFunction, Request, Response } from 'express'
 import User from '~/models/schemas/User.schema'
 import { userService } from '~/services/users.services'
 import { ParamsDictionary } from 'express-serve-static-core'
@@ -6,11 +6,14 @@ import {
   LoginReqBody,
   LogoutReqBody,
   RegisterReqBody,
-  TokenPlayload,
+  TokenPayload,
   VerifyEmailReqBody,
   ResetPasswordReqBody,
   UpdateMeReqBody,
-  GetProfileReqParams
+  GetProfileReqParams,
+  FollowReqBody,
+  UnfollowReqParams,
+  ChangePasswordReqBody
 } from '~/models/requests/User.requests'
 import { ObjectId } from 'mongodb'
 import { USERS_MESSAGES } from '~/constants/messages'
@@ -54,7 +57,7 @@ export const emailVerifyTokenController = async (
 ) => {
   // nếu mà code vào đc đây nghĩa là email_verify_token hợp lệ
   // và mình đã lấy đc decoded_email_verify_token
-  const { user_id } = req.decoded_email_verify_token as TokenPlayload
+  const { user_id } = req.decoded_email_verify_token as TokenPayload
   // dựa vào user_id tìm user và xem thử nó đã verify chưa?
   const user = await databaseService.users.findOne({ _id: new ObjectId(user_id) })
   if (user === null) {
@@ -98,7 +101,7 @@ export const resendEmailVerifyTokenController = async (
 ) => {
   // nếu vào đc đây có nghĩa là accessToken hợp lệ
   // và mình đã lấy đc decoded_authorization
-  const { user_id } = req.decoded_authorization as TokenPlayload
+  const { user_id } = req.decoded_authorization as TokenPayload
   // dựa vào user_id tìm user và xem thử nó đã verify chưa?
   const user = await databaseService.users.findOne({ _id: new ObjectId(user_id) })
   if (user === null) {
@@ -144,7 +147,7 @@ export const resetPasswordController = async (
   res: Response
 ) => {
   // muốn đổi mật khẩu thì cần user_id, password mới
-  const { user_id } = req.decoded_forgot_password_token as TokenPlayload
+  const { user_id } = req.decoded_forgot_password_token as TokenPayload
   const { password } = req.body
   // cập nhật
   const result = await userService.resetPassword({ user_id, password })
@@ -153,7 +156,7 @@ export const resetPasswordController = async (
 
 export const getMeController = async (req: Request, res: Response) => {
   // muốn lấy profile của mình thì có user_id của mình
-  const { user_id } = req.decoded_authorization as TokenPlayload
+  const { user_id } = req.decoded_authorization as TokenPayload
   // dùng user_id tìm user
   const user = await userService.getMe(user_id)
   return res.json({
@@ -164,7 +167,7 @@ export const getMeController = async (req: Request, res: Response) => {
 
 export const updateMeController = async (req: Request<ParamsDictionary, any, UpdateMeReqBody>, res: Response) => {
   // muốn update thì cần user_id, và các thông tin cần update
-  const { user_id } = req.decoded_authorization as TokenPlayload
+  const { user_id } = req.decoded_authorization as TokenPayload
   const { body } = req
   // update lại user
   const user = await userService.updateMe({ user_id, payload: body })
@@ -182,4 +185,36 @@ export const getProfileController = async (req: Request<GetProfileReqParams>, re
     message: USERS_MESSAGES.GET_PROFILE_SUCCESS,
     result: user
   })
+}
+
+export const followController = async (
+  req: Request<ParamsDictionary, any, FollowReqBody>,
+  res: Response,
+  next: NextFunction
+) => {
+  const { user_id } = req.decoded_authorization as TokenPayload //user_id của người đang đăng nhập
+  const { followed_user_id } = req.body //user_id của người mà ngta muốn follow
+  const result = await userService.follow(user_id, followed_user_id)
+  return res.json(result)
+}
+
+export const unfollowController = async (req: Request<UnfollowReqParams>, res: Response, next: NextFunction) => {
+  // lấy ra user_id người muốn thực hiện hành động unfollow
+  const { user_id } = req.decoded_authorization as TokenPayload
+  // lấy ra user_id của người mà ngta muốn unfollow
+  const { user_id: followed_user_id } = req.params
+  // gọi hàm unfollow
+  const result = await userService.unfollow(user_id, followed_user_id) //user_id của người đang đăng nhập, user_id của người mà ngta muốn unfollow
+  return res.json(result)
+}
+
+export const changePasswordController = async (
+  req: Request<ParamsDictionary, any, ChangePasswordReqBody>,
+  res: Response,
+  next: NextFunction
+) => {
+  const { user_id } = req.decoded_authorization as TokenPayload //lấy user_id từ decoded_authorization của access_token
+  const { password } = req.body //lấy old_password và password từ req.body
+  const result = await userService.changePassword(user_id, password) //chưa code changePassword
+  return res.json(result)
 }
