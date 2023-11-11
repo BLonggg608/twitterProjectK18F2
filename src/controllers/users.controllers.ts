@@ -221,14 +221,14 @@ export const changePasswordController = async (
   return res.json(result)
 }
 
-export const refreshController = async (
+export const refreshTokenController = async (
   req: Request<ParamsDictionary, any, RefreshTokenReqBody>,
   res: Response,
   next: NextFunction
 ) => {
   const { refresh_token } = req.body //lấy refresh_token từ req.body
-  const { user_id, verify } = req.decoded_refresh_token as TokenPayload //lấy refresh_token từ req.body
-  const result = await userService.refreshToken({ user_id, refresh_token, verify })
+  const { user_id, verify, exp } = req.decoded_refresh_token as TokenPayload //lấy refresh_token từ req.body
+  const result = await userService.refreshToken({ user_id, refresh_token, verify, exp })
   return res.json({
     message: USERS_MESSAGES.REFRESH_TOKEN_SUCCESS,
     result
